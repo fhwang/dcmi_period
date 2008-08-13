@@ -7,7 +7,8 @@ describe 'DCMI::Period' do
       @start_time = Time.now.utc
       @end_time = Time.now.utc + ( 10 * 60 )
       @period = DCMI::Period.new(
-        'The next ten minutes', @start_time, @end_time, 'W3C-DTF'
+        :name => 'The next ten minutes', :start => @start_time,
+        :end => @end_time, :scheme => 'W3C-DTF'
       )
     end
   

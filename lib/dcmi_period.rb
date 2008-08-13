@@ -16,15 +16,18 @@ module DCMI
           scheme = $1
         end
       end
-      new( name, start, _end, scheme )
+      new( :name => name, :start => start, :end => _end, :scheme => scheme )
     end
     
     attr_accessor :name, :start, :scheme
     alias_method :begin, :start
     alias_method :first, :start
     
-    def initialize( name, start, _end, scheme )
-      @name, @start, @_end, @scheme = name, start, _end, scheme
+    def initialize( atts )
+      @name = atts[:name]
+      @start = atts[:start]
+      @_end = atts[:end]
+      @scheme = atts[:scheme]
     end
     
     def end; @_end; end
