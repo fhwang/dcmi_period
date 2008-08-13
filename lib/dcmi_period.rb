@@ -4,14 +4,15 @@ module DCMI
   class Period
     def self.parse( str )
       name, start, _end, scheme = nil, nil, nil, nil
-      str.each do |line|
-        if line =~ /^\s*name=(.*)/
+      str.split( /(\n|;)+/ ).each do |component|
+        component.strip!
+        if component =~ /name=(.*)/
           name = $1
-        elsif line =~ /^\s*start=(.*)/
+        elsif component =~ /start=(.*)/
           start = Time.parse $1
-        elsif line =~ /^\s*end=(.*)/
+        elsif component =~ /end=(.*)/
           _end = Time.parse $1
-        elsif line =~ /^\s*scheme=(.*)/
+        elsif component =~ /scheme=(.*)/
           scheme = $1
         end
       end

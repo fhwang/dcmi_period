@@ -89,5 +89,43 @@ describe 'DCMI::Period' do
         @period.scheme.should == 'W3C-DTF'
       end
     end
+    
+    describe 'with a mix of semicolons and line-endings' do
+      before :all do
+        str = <<-STR
+          name=How long I can hold my breath; start=2008-06-24T01:01:00.0000000
+          end=2008-07-01T01:01:00.0000000; scheme=W3C-DTF
+        STR
+        @period = DCMI::Period.parse str
+      end
+    
+      it 'should have a name' do
+        @period.name.should == 'How long I can hold my breath'
+      end
+      
+      it 'should have a start' do
+        @period.start.year.should       == 2008
+        @period.start.month.should      == 6
+        @period.start.day.should        == 24
+        @period.start.hour.should       == 1
+        @period.start.min.should        == 1
+        @period.start.sec.should        == 0
+        @period.start.utc_offset.should == -14400
+      end
+      
+      it 'should have an end' do
+        @period.end.year.should       == 2008
+        @period.end.month.should      == 7
+        @period.end.day.should        == 1
+        @period.end.hour.should       == 1
+        @period.end.min.should        == 1
+        @period.end.sec.should        == 0
+        @period.end.utc_offset.should == -14400
+      end
+      
+      it 'should have a scheme' do
+        @period.scheme.should == 'W3C-DTF'
+      end
+    end
   end
 end
