@@ -16,6 +16,48 @@ describe 'DCMI::Period' do
       @period.begin.should == @start_time
       @period.first.should == @start_time
     end
+    
+    it 'should be == to another instance with same start, end, and scheme' do
+      period2 = DCMI::Period.new(
+        :name => 'The next six-hundred seconds', :start => @start_time,
+        :end => @end_time, :scheme => 'W3C-DTF'
+      )
+      @period.should == period2
+      period2.should == @period
+    end
+    
+    it 'should not be == to a Range' do
+      range = @start_time..@end_time
+      @period.should_not == range
+      range.should_not   == @period
+    end
+    
+    it 'should not be == to another instance with different start' do
+      period2 = DCMI::Period.new(
+        :name => 'Ten minutes and one second', :start => @start_time - 1,
+        :end => @end_time, :scheme => 'W3C-DTF'
+      )
+      @period.should_not == period2
+      period2.should_not == @period
+    end
+    
+    it 'should not be == to another instance with different end' do
+      period2 = DCMI::Period.new(
+        :name => 'Ten minutes and one second', :start => @start_time,
+        :end => @end_time + 1, :scheme => 'W3C-DTF'
+      )
+      @period.should_not == period2
+      period2.should_not == @period
+    end
+    
+    it 'should not be == to another instance with different scheme' do
+      period2 = DCMI::Period.new(
+        :name => 'Phanerozoic Eon', :start => 'Cambrian period',
+        :scheme => 'Geological timescale'
+      )
+      @period.should_not == period2
+      period2.should_not == @period
+    end
   end
 
   describe '.parse' do
@@ -126,6 +168,29 @@ describe 'DCMI::Period' do
       
       it 'should have a scheme' do
         @period.scheme.should == 'W3C-DTF'
+      end
+    end
+  
+    describe "with a scheme I can't parse" do
+      before :all do
+        str = <<-STR
+          name=Phanerozoic Eon; start=Cambrian period
+          end=Some other period; scheme=Geological timescale
+        STR
+        @period = DCMI::Period.parse str
+      end
+    
+      it 'should have a name' do
+        @period.name.should == 'Phanerozoic Eon'
+      end
+    
+      it 'should not try to parse start or end' do
+        @period.start.should == 'Cambrian period'
+        @period.end.should == 'Some other period'
+      end
+      
+      it 'should have a scheme' do
+        @period.scheme.should == 'Geological timescale'
       end
     end
   end
