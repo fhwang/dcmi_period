@@ -19,6 +19,8 @@ module DCMI
     end
     
     attr_accessor :name, :start, :scheme
+    alias_method :begin, :start
+    alias_method :first, :start
     
     def initialize( name, start, _end, scheme )
       @name, @start, @_end, @scheme = name, start, _end, scheme
