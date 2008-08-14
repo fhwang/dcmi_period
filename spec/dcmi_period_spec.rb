@@ -18,7 +18,7 @@ describe 'DCMI::Period' do
     end
   end
   
-  describe '==' do
+  describe '#==' do
     before :all do
       @start_time = Time.now.utc
       @end_time = Time.now.utc + ( 10 * 60 )
@@ -70,13 +70,46 @@ describe 'DCMI::Period' do
       period2.should_not == @period
     end
   end
+  
+  describe '#to_s' do
+    before :all do
+      @start_time = Time.utc( 2006, 1, 1, 1, 1 )
+      @end_time = Time.utc( 2010, 1, 1, 1, 1 )
+      @period = DCMI::Period.new(
+        :name => '2006 to 2010', :start => @start_time,
+        :end => @end_time, :scheme => 'W3C-DTF'
+      )
+      @string = @period.to_s
+    end
+
+    it 'should contain the name' do
+      @string.should match( /name=2006 to 2010/ )
+    end
+
+    it 'should contain the start' do
+      @string.should match( /start=2006-01-01T01:01:00Z/ )
+    end
+
+    it 'should contain the end' do
+      @string.should match( /end=2010-01-01T01:01:00Z/ )
+    end
+
+    it 'should contain the scheme' do
+      @string.should match( /scheme=W3C-DTF/ )
+    end
+    
+    it 'should be parseable by DCMI::Period.parse' do
+      period2 = DCMI::Period.parse @string
+      period2.should == @period
+    end
+  end
 
   describe '.parse' do
     describe 'with no end' do
       before :all do
         str = <<-STR
           name=From 2008 to forever
-          start=2008-01-01T01:01:00.0000000
+          start=2008-01-01T01:01:00z
           scheme=W3C-DTF
         STR
         @period = DCMI::Period.parse str
@@ -93,7 +126,7 @@ describe 'DCMI::Period' do
         @period.start.hour.should       == 1
         @period.start.min.should        == 1
         @period.start.sec.should        == 0
-        @period.start.utc_offset.should == -18000
+        @period.start.utc_offset.should == 0
       end
       
       it 'should have an end' do
@@ -108,8 +141,8 @@ describe 'DCMI::Period' do
     describe 'with no name' do
       before :all do
         str = <<-STR
-          start=2008-06-24T01:01:00.0000000
-          end=2008-07-01T01:01:00.0000000
+          start=2008-06-24T01:01:00Z
+          end=2008-07-01T01:01:00Z
           scheme=W3C-DTF
         STR
         @period = DCMI::Period.parse str
@@ -126,7 +159,7 @@ describe 'DCMI::Period' do
         @period.start.hour.should       == 1
         @period.start.min.should        == 1
         @period.start.sec.should        == 0
-        @period.start.utc_offset.should == -14400
+        @period.start.utc_offset.should == 0
       end
       
       it 'should have an end' do
@@ -136,7 +169,7 @@ describe 'DCMI::Period' do
         @period.end.hour.should       == 1
         @period.end.min.should        == 1
         @period.end.sec.should        == 0
-        @period.end.utc_offset.should == -14400
+        @period.end.utc_offset.should == 0
       end
       
       it 'should have a scheme' do
@@ -147,8 +180,8 @@ describe 'DCMI::Period' do
     describe 'with a mix of semicolons and line-endings' do
       before :all do
         str = <<-STR
-          name=How long I can hold my breath; start=2008-06-24T01:01:00.0000000
-          end=2008-07-01T01:01:00.0000000; scheme=W3C-DTF
+          name=How long I can hold my breath; start=2008-06-24T01:01:00Z
+          end=2008-07-01T01:01:00Z; scheme=W3C-DTF
         STR
         @period = DCMI::Period.parse str
       end
@@ -164,7 +197,7 @@ describe 'DCMI::Period' do
         @period.start.hour.should       == 1
         @period.start.min.should        == 1
         @period.start.sec.should        == 0
-        @period.start.utc_offset.should == -14400
+        @period.start.utc_offset.should == 0
       end
       
       it 'should have an end' do
@@ -174,7 +207,7 @@ describe 'DCMI::Period' do
         @period.end.hour.should       == 1
         @period.end.min.should        == 1
         @period.end.sec.should        == 0
-        @period.end.utc_offset.should == -14400
+        @period.end.utc_offset.should == 0
       end
       
       it 'should have a scheme' do

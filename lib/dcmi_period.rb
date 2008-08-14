@@ -33,7 +33,9 @@ module DCMI
     def initialize( atts )
       @name = atts[:name]
       @start = atts[:start]
+      @start.utc if @start.respond_to? :utc
       @_end = atts[:end]
+      @_end.utc if @_end.respond_to? :utc
       @scheme = atts[:scheme]
     end
     
@@ -48,5 +50,15 @@ module DCMI
     def end; @_end; end
     
     def end=( _end ); @_end = _end; end
+    
+    def to_s
+      components = {}
+      components['name'] = name if name
+      strftime_format = '%Y-%m-%dT%H:%M:%SZ'
+      components['start'] = start.strftime( strftime_format ) if start
+      components['end'] = self.end.strftime( strftime_format ) if self.end
+      components['scheme'] = scheme if scheme
+      components.map { |name, value| "#{ name }=#{ value }" }.join( "\n" )
+    end
   end
 end
