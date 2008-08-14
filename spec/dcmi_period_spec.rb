@@ -16,8 +16,19 @@ describe 'DCMI::Period' do
       @period.begin.should == @start_time
       @period.first.should == @start_time
     end
+  end
+  
+  describe '==' do
+    before :all do
+      @start_time = Time.now.utc
+      @end_time = Time.now.utc + ( 10 * 60 )
+      @period = DCMI::Period.new(
+        :name => 'The next ten minutes', :start => @start_time,
+        :end => @end_time, :scheme => 'W3C-DTF'
+      )
+    end
     
-    it 'should be == to another instance with same start, end, and scheme' do
+    it 'should be true for another instance with same start, end, and scheme' do
       period2 = DCMI::Period.new(
         :name => 'The next six-hundred seconds', :start => @start_time,
         :end => @end_time, :scheme => 'W3C-DTF'
@@ -26,13 +37,13 @@ describe 'DCMI::Period' do
       period2.should == @period
     end
     
-    it 'should not be == to a Range' do
+    it 'should be false for a Range' do
       range = @start_time..@end_time
       @period.should_not == range
       range.should_not   == @period
     end
     
-    it 'should not be == to another instance with different start' do
+    it 'should be false for another instance with different start' do
       period2 = DCMI::Period.new(
         :name => 'Ten minutes and one second', :start => @start_time - 1,
         :end => @end_time, :scheme => 'W3C-DTF'
@@ -41,7 +52,7 @@ describe 'DCMI::Period' do
       period2.should_not == @period
     end
     
-    it 'should not be == to another instance with different end' do
+    it 'should be false for another instance with different end' do
       period2 = DCMI::Period.new(
         :name => 'Ten minutes and one second', :start => @start_time,
         :end => @end_time + 1, :scheme => 'W3C-DTF'
@@ -50,7 +61,7 @@ describe 'DCMI::Period' do
       period2.should_not == @period
     end
     
-    it 'should not be == to another instance with different scheme' do
+    it 'should be false for another instance with different scheme' do
       period2 = DCMI::Period.new(
         :name => 'Phanerozoic Eon', :start => 'Cambrian period',
         :scheme => 'Geological timescale'
