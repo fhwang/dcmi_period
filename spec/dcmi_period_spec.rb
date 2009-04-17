@@ -109,7 +109,7 @@ describe 'DCMI::Period' do
       before :all do
         str = <<-STR
           name=From 2008 to forever
-          start=2008-01-01T01:01:00z
+          start=2008-01-01T01:01:00Z
           scheme=W3C-DTF
         STR
         @period = DCMI::Period.parse str
@@ -129,7 +129,7 @@ describe 'DCMI::Period' do
         @period.start.utc_offset.should == 0
       end
       
-      it 'should have an end' do
+      it 'should not have an end' do
         @period.end.should be_nil
       end
       
@@ -235,6 +235,50 @@ describe 'DCMI::Period' do
       
       it 'should have a scheme' do
         @period.scheme.should == 'Geological timescale'
+      end
+    end
+    
+    describe 'when the specified scheme is W3C-DTF but the timezone is missing' do
+      before :all do
+        @str = <<-STR
+          name=From 2008 to forever
+          start=2008-01-01T01:01:00
+          scheme=W3C-DTF
+        STR
+      end
+      
+      it 'should raise a parse error' do
+        lambda {
+          DCMI::Period.parse @str
+        }.should raise_error(ArgumentError)
+      end
+      
+      describe "but we've decided to force to UTC" do
+        before :each do
+          @period = DCMI::Period.parse @str, :missing_timezones_to_utc => true
+        end
+    
+        it 'should have a name' do
+          @period.name.should == 'From 2008 to forever'
+        end
+        
+        it 'should have a start' do
+          @period.start.year.should       == 2008
+          @period.start.month.should      == 1
+          @period.start.day.should        == 1
+          @period.start.hour.should       == 1
+          @period.start.min.should        == 1
+          @period.start.sec.should        == 0
+          @period.start.utc_offset.should == 0
+        end
+        
+        it 'should not have an end' do
+          @period.end.should be_nil
+        end
+        
+        it 'should have a scheme' do
+          @period.scheme.should == 'W3C-DTF'
+        end
       end
     end
   end
