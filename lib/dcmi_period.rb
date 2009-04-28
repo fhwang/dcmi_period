@@ -16,9 +16,27 @@ module DCMI
           scheme = $1
         end
       end
-      start = parse_time start_str, scheme, opts[:missing_timezones_to_utc]
-      _end = parse_time end_str, scheme, opts[:missing_timezones_to_utc]
-      new( :name => name, :start => start, :end => _end, :scheme => scheme )
+      bad_time_strings = []
+      begin
+        start = parse_time start_str, scheme, opts[:missing_timezones_to_utc]
+      rescue ArgumentError
+        bad_time_strings << [ :start, start_str ]
+      end
+      begin
+        _end = parse_time end_str, scheme, opts[:missing_timezones_to_utc]
+      rescue ArgumentError
+        bad_time_strings << [ :end, end_str ]
+      end
+      if bad_time_strings.empty?
+        new( :name => name, :start => start, :end => _end, :scheme => scheme )
+      else
+        raise(
+          ArgumentError,
+          bad_time_strings.map { |field_name, string|
+            "#{field_name} time '#{string}' could not be parsed"
+          }.join('; ')
+        )
+      end
     end
     
     def self.parse_time(str, scheme, missing_timezones_to_utc)

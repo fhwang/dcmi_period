@@ -281,5 +281,25 @@ describe 'DCMI::Period' do
         end
       end
     end
+    
+    describe "when the specified scheme is W3C-DTF but start and end times can't be parsed" do
+      before :all do
+        @str = <<-STR
+          name=From 2008 to forever
+          start=0000-00-00T00:00:00Z
+          end=0000-00-00T00:00:00Z
+          scheme=W3C-DTF
+        STR
+      end
+      
+      it 'should raise an ArgumentError' do
+        lambda {
+          DCMI::Period.parse @str
+        }.should raise_error(
+          ArgumentError,
+          "start time '0000-00-00T00:00:00Z' could not be parsed; end time '0000-00-00T00:00:00Z' could not be parsed"
+        )
+      end
+    end
   end
 end
