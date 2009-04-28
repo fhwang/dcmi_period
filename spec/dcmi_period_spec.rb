@@ -301,5 +301,47 @@ describe 'DCMI::Period' do
         )
       end
     end
+    
+    describe 'with decimal fractions of seconds' do
+      before :all do
+        str = <<-STR
+          name=From 2008 to 2009
+          start=2008-01-01T01:01:00.123456Z
+          end=2009-01-01T01:01:00.1234567Z
+          scheme=W3C-DTF
+        STR
+        @period = DCMI::Period.parse str
+      end
+    
+      it 'should have a name' do
+        @period.name.should == 'From 2008 to 2009'
+      end
+      
+      it 'should have a start' do
+        @period.start.year.should       == 2008
+        @period.start.month.should      == 1
+        @period.start.day.should        == 1
+        @period.start.hour.should       == 1
+        @period.start.min.should        == 1
+        @period.start.sec.should        == 0
+        @period.start.usec.should       == 123456
+        @period.start.utc_offset.should == 0
+      end
+      
+      it 'should have an end' do
+        @period.end.year.should       == 2009
+        @period.end.month.should      == 1
+        @period.end.day.should        == 1
+        @period.end.hour.should       == 1
+        @period.end.min.should        == 1
+        @period.end.sec.should        == 0
+        @period.end.usec.should       == 123456
+        @period.end.utc_offset.should == 0
+      end
+      
+      it 'should have a scheme' do
+        @period.scheme.should == 'W3C-DTF'
+      end
+    end
   end
 end
