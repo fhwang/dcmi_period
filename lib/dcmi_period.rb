@@ -3,49 +3,56 @@ require 'time'
 module DCMI
   class Period
     class Parser
-      def initialize(str, opts = {})
+      def initialize(str, opts)
         @str = str
-        @missing_timezones_to_utc = opts[:missing_timezones_to_utc]
+        @time_string_transforms = opts[:time_string_transforms] || []
       end
       
       def execute
         @name, start_str, end_str, @scheme = *parse_to_strings
-        bad_time_strings = []
-        begin
-          start = parse_time start_str
-        rescue ArgumentError
-          bad_time_strings << [ :start, start_str ]
-        end
-        begin
-          _end = parse_time end_str
-        rescue ArgumentError
-          bad_time_strings << [ :end, end_str ]
-        end
-        if bad_time_strings.empty?
+        @bad_time_strings = []
+        @transformed_time_strings = []
+        start = parse_time start_str, :start
+        _end = parse_time end_str, :end
+        if @bad_time_strings.empty?
+          info = @transformed_time_strings.map { |field, str, transformed|
+            "#{field} time '#{str}' doesn't conform to W3C-DTF; parsed as '#{transformed}'"
+          }.join('; ')
           DCMI::Period.new(
-            :name => @name, :start => start, :end => _end, :scheme => @scheme
+            :name => @name, :start => start, :end => _end, :scheme => @scheme,
+            :info => info
           )
         else
           raise(
             ArgumentError,
-            bad_time_strings.map { |field_name, string|
+            @bad_time_strings.map { |field_name, string|
               "#{field_name} time '#{string}' could not be parsed"
             }.join('; ')
           )
         end
       end
     
-      def parse_time(str)
+      def parse_time(str, field)
         if (@scheme == 'W3C-DTF' || @scheme.nil?) && str
+          time = nil
           begin
-            w3cdtf str
-          rescue ArgumentError => err
-            if @missing_timezones_to_utc
-              str = str + 'Z'
-              w3cdtf str
-            else
-              raise err
+            time = w3cdtf str
+          rescue ArgumentError
+            @time_string_transforms.each do |time_string_transform|
+              unless time
+                begin
+                  time = w3cdtf time_string_transform.call(str)
+                  if time_string_transform.call(str) != str
+                    @transformed_time_strings << [
+                      field, str, time_string_transform.call(str)
+                    ]
+                  end
+                rescue ArgumentError => err
+                  # try the next one
+                end
+              end
             end
+            time || (@bad_time_strings << [field, str])
           end
         else
           str
@@ -91,11 +98,11 @@ module DCMI
       end
     end
     
-    def self.parse(str, opts = {})
+    def self.parse(str, opts={})
       Parser.new(str, opts).execute
     end
     
-    attr_accessor :name, :start, :scheme
+    attr_accessor :info, :name, :start, :scheme
     alias_method :begin, :start
     alias_method :first, :start
     
@@ -106,6 +113,7 @@ module DCMI
       @_end = atts[:end]
       @_end.utc if @_end.respond_to? :utc
       @scheme = atts[:scheme]
+      @info = atts[:info]
     end
     
     def ==( obj )

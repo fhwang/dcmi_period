@@ -250,35 +250,9 @@ describe 'DCMI::Period' do
       it 'should raise a parse error' do
         lambda {
           DCMI::Period.parse @str
-        }.should raise_error(ArgumentError)
-      end
-      
-      describe "but we've decided to force to UTC" do
-        before :each do
-          @period = DCMI::Period.parse @str, :missing_timezones_to_utc => true
-        end
-    
-        it 'should have a name' do
-          @period.name.should == 'From 2008 to forever'
-        end
-        
-        it 'should have a start' do
-          @period.start.year.should       == 2008
-          @period.start.month.should      == 1
-          @period.start.day.should        == 1
-          @period.start.hour.should       == 1
-          @period.start.min.should        == 1
-          @period.start.sec.should        == 0
-          @period.start.utc_offset.should == 0
-        end
-        
-        it 'should not have an end' do
-          @period.end.should be_nil
-        end
-        
-        it 'should have a scheme' do
-          @period.scheme.should == 'W3C-DTF'
-        end
+        }.should raise_error(
+          ArgumentError, "start time '2008-01-01T01:01:00' could not be parsed"
+        )
       end
     end
     
@@ -341,6 +315,117 @@ describe 'DCMI::Period' do
       
       it 'should have a scheme' do
         @period.scheme.should == 'W3C-DTF'
+      end
+    end
+  end
+  
+  describe '.parse with custom time string transforms' do
+    before :all do
+      @base_str = <<-STR
+        name=From 2008 to forever
+        start=START_TIME
+        scheme=W3C-DTF
+      STR
+      @time_string_transforms = [
+        Proc.new { |time_string| time_string + 'Z' },
+        Proc.new { |time_string|
+          time_string.gsub(
+            /(\d{4}-\d{2}-\d{2}T\d{2})\.(\d{2}:\d{2}Z)/, '\1:\2'
+          )
+        },
+        Proc.new { |time_string|
+          time_string.gsub(
+            /(\d{4}-\d{2}-\d{2}T\d{2}\:\d{2}-\d{2})(\d{2})/, '\1:\2'
+          )
+        }
+      ]
+    end
+    
+    describe 'with a missing timezone' do
+      before :all do
+        str = @base_str.gsub /START_TIME/, '2008-01-01T01:01:00'
+        @period = DCMI::Period.parse(
+          str, :time_string_transforms => @time_string_transforms
+        )
+      end
+      
+      it 'should force to UTC' do
+        @period.start.year.should       == 2008
+        @period.start.month.should      == 1
+        @period.start.day.should        == 1
+        @period.start.hour.should       == 1
+        @period.start.min.should        == 1
+        @period.start.sec.should        == 0
+        @period.start.utc_offset.should == 0
+      end
+      
+      it 'should have some useful info' do
+        @period.info.should ==
+            "start time '2008-01-01T01:01:00' doesn't conform to W3C-DTF; parsed as '2008-01-01T01:01:00Z'"
+      end
+    end
+    
+    describe "with bad format '2010-05-14T12.00:00Z'" do
+      before :all do
+        str = @base_str.gsub /START_TIME/, '2010-05-14T12.00:00Z'
+        @period = DCMI::Period.parse(
+          str, :time_string_transforms => @time_string_transforms
+        )
+      end
+      
+      it 'should set hour-min divider appropriately' do
+        @period.start.year.should       == 2010
+        @period.start.month.should      == 5
+        @period.start.day.should        == 14
+        @period.start.hour.should       == 12
+        @period.start.min.should        == 0
+        @period.start.sec.should        == 0
+        @period.start.utc_offset.should == 0
+      end
+      
+      it 'should have some useful info' do
+        @period.info.should ==
+            "start time '2010-05-14T12.00:00Z' doesn't conform to W3C-DTF; parsed as '2010-05-14T12:00:00Z'"
+      end
+    end
+    
+    describe "with bad format '2009-05-12T19:00-0700'" do
+      before :all do
+        str = @base_str.gsub /START_TIME/, '2009-05-12T19:00-0700'
+        @period = DCMI::Period.parse(
+          str, :time_string_transforms => @time_string_transforms
+        )
+      end
+      
+      it 'should set time offset appropriately' do
+        @period.start.year.should       == 2009
+        @period.start.month.should      == 5
+        @period.start.day.should        == 13
+        @period.start.hour.should       == 2
+        @period.start.min.should        == 0
+        @period.start.sec.should        == 0
+        @period.start.utc_offset.should == 0
+      end
+      
+      it 'should have some useful info' do
+        @period.info.should ==
+            "start time '2009-05-12T19:00-0700' doesn't conform to W3C-DTF; parsed as '2009-05-12T19:00-07:00'"
+      end
+    end
+    
+    describe "with bad format 'monkey'" do
+      before :all do
+        @str = @base_str.gsub /START_TIME/, 'monkey'
+      end
+      
+      it 'should raise an ArgumentError' do
+        lambda {
+          DCMI::Period.parse(
+            @str, :time_string_transforms => @time_string_transforms
+          )
+        }.should raise_error(
+          ArgumentError, "start time 'monkey' could not be parsed"
+        )
       end
     end
   end
