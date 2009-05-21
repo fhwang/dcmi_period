@@ -8,6 +8,12 @@ module DCMI
         @time_string_transforms = opts[:time_string_transforms] || []
       end
       
+      def info
+        @transformed_time_strings.map { |field, str, transformed|
+          "#{field} time '#{str}' doesn't conform to W3C-DTF; parsed as '#{transformed}'"
+        }.join('; ')
+      end
+      
       def execute
         @name, start_str, end_str, @scheme = *parse_to_strings
         @bad_time_strings = []
@@ -15,20 +21,12 @@ module DCMI
         start = parse_time start_str, :start
         _end = parse_time end_str, :end
         if @bad_time_strings.empty?
-          info = @transformed_time_strings.map { |field, str, transformed|
-            "#{field} time '#{str}' doesn't conform to W3C-DTF; parsed as '#{transformed}'"
-          }.join('; ')
           DCMI::Period.new(
             :name => @name, :start => start, :end => _end, :scheme => @scheme,
             :info => info
           )
         else
-          raise(
-            ArgumentError,
-            @bad_time_strings.map { |field_name, string|
-              "#{field_name} time '#{string}' could not be parsed"
-            }.join('; ')
-          )
+          raise_error_from_bad_time_strings
         end
       end
     
@@ -39,18 +37,7 @@ module DCMI
             time = w3cdtf str
           rescue ArgumentError
             @time_string_transforms.each do |time_string_transform|
-              unless time
-                begin
-                  time = w3cdtf time_string_transform.call(str)
-                  if time_string_transform.call(str) != str
-                    @transformed_time_strings << [
-                      field, str, time_string_transform.call(str)
-                    ]
-                  end
-                rescue ArgumentError => err
-                  # try the next one
-                end
-              end
+              time ||= try_next_transform(str, field, time_string_transform)
             end
             time || (@bad_time_strings << [field, str])
           end
@@ -74,6 +61,30 @@ module DCMI
           end
         end
         [name, start_str, end_str, scheme]
+      end
+      
+      def raise_error_from_bad_time_strings
+        raise(
+          ArgumentError,
+          @bad_time_strings.map { |field_name, string|
+            "#{field_name} time '#{string}' could not be parsed"
+          }.join('; ')
+        )
+      end
+      
+      def try_next_transform(str, field, time_string_transform)
+        begin
+          time = w3cdtf time_string_transform.call(str)
+          if time_string_transform.call(str) != str
+            @transformed_time_strings << [
+              field, str, time_string_transform.call(str)
+            ]
+          end
+          time
+        rescue ArgumentError => err
+          # try the next one
+          nil
+        end
       end
     
       # Lifted from rss/rss.rb
