@@ -10,7 +10,12 @@ module DCMI
       
       def info
         @transformed_time_strings.map { |field, str, transformed|
-          "#{field} time '#{str}' doesn't conform to W3C-DTF; parsed as '#{transformed}'"
+          str = "#{field} time '#{str}' doesn't conform to W3C-DTF; "
+          if transformed
+            str << "parsed as '#{transformed}'"
+          else
+            str << "set to nil"
+          end
         }.join('; ')
       end
       
@@ -33,14 +38,24 @@ module DCMI
       def parse_time(str, field)
         if (@scheme == 'W3C-DTF' || @scheme.nil?) && str
           time = nil
+          found = false
           begin
             time = w3cdtf str
+            found = true
           rescue ArgumentError
             @time_string_transforms.each do |time_string_transform|
-              time ||= try_next_transform(str, field, time_string_transform)
+              begin
+                unless found
+                  time = try_next_transform(str, field, time_string_transform)
+                  found = true
+                end
+              rescue ArgumentError => err
+                # try the next one
+              end
             end
-            time || (@bad_time_strings << [field, str])
+            @bad_time_strings << [field, str] unless found
           end
+          time
         else
           str
         end
@@ -73,16 +88,15 @@ module DCMI
       end
       
       def try_next_transform(str, field, time_string_transform)
-        begin
-          time = w3cdtf time_string_transform.call(str)
-          if time_string_transform.call(str) != str
-            @transformed_time_strings << [
-              field, str, time_string_transform.call(str)
-            ]
+        transformed = time_string_transform.call str
+        if transformed
+          time = w3cdtf transformed
+          if transformed != str
+            @transformed_time_strings << [field, str, transformed]
           end
           time
-        rescue ArgumentError => err
-          # try the next one
+        else
+          @transformed_time_strings << [field, str, nil]
           nil
         end
       end

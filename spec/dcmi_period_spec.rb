@@ -317,6 +317,22 @@ describe 'DCMI::Period' do
         @period.scheme.should == 'W3C-DTF'
       end
     end
+    
+    describe 'with an invalid blank component value' do
+      before :all do
+        @str = <<-STR
+          start=2008-01-01T01:01:00Z;end=;scheme=W3C-DTF
+        STR
+      end
+      
+      it 'should normally raise an ArgumentError' do
+        lambda {
+          DCMI::Period.parse @str
+        }.should raise_error(
+          ArgumentError, "end time '' could not be parsed"
+        )
+      end
+    end
   end
   
   describe '.parse with custom time string transforms' do
@@ -337,7 +353,8 @@ describe 'DCMI::Period' do
           time_string.gsub(
             /(\d{4}-\d{2}-\d{2}T\d{2}\:\d{2}-\d{2})(\d{2})/, '\1:\2'
           )
-        }
+        },
+        Proc.new { |time_string| (time_string =~ /^\s*$/) ? nil : time_string }
       ]
     end
     
@@ -426,6 +443,24 @@ describe 'DCMI::Period' do
         }.should raise_error(
           ArgumentError, "start time 'monkey' could not be parsed"
         )
+      end
+    end
+    
+    describe 'with a blank component value' do
+      before :all do
+        str = @base_str.gsub /START_TIME/, ''
+        @period = DCMI::Period.parse(
+          str, :time_string_transforms => @time_string_transforms
+        )
+      end
+      
+      it 'should simply accept that as a nil value' do
+        @period.start.should be_nil
+      end
+      
+      it 'should have some useful info' do
+        @period.info.should ==
+            "start time '' doesn't conform to W3C-DTF; set to nil"
       end
     end
   end
