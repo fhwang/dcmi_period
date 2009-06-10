@@ -6,6 +6,9 @@ module DCMI
       def initialize(str, opts)
         @str = str
         @time_string_transforms = opts[:time_string_transforms] || []
+        @time_string_transforms.unshift(
+          Proc.new { |time_string| time_string }
+        )
       end
       
       def info
@@ -39,22 +42,17 @@ module DCMI
         if (@scheme == 'W3C-DTF' || @scheme.nil?) && str
           time = nil
           found = false
-          begin
-            time = w3cdtf str
-            found = true
-          rescue ArgumentError
-            @time_string_transforms.each do |time_string_transform|
-              begin
-                unless found
-                  time = try_next_transform(str, field, time_string_transform)
-                  found = true
-                end
-              rescue ArgumentError => err
-                # try the next one
+          @time_string_transforms.each do |time_string_transform|
+            begin
+              unless found
+                time = try_next_transform(str, field, time_string_transform)
+                found = true
               end
+            rescue ArgumentError => err
+              # try the next one
             end
-            @bad_time_strings << [field, str] unless found
           end
+          @bad_time_strings << [field, str] unless found
           time
         else
           str
