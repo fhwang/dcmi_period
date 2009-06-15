@@ -9,6 +9,8 @@ module DCMI
         @time_string_transforms.unshift(
           Proc.new { |time_string| time_string }
         )
+        @accept_any_whitespace_to_separate_components =
+            opts[:accept_any_whitespace_to_separate_components]
       end
       
       def info
@@ -61,7 +63,12 @@ module DCMI
       
       def parse_to_strings
         name, start_str, end_str, scheme = nil, nil, nil, nil
-        @str.split( /(\n|;)+/ ).each do |component|
+        regex = if @accept_any_whitespace_to_separate_components
+          /(\s|;)+/
+        else
+          /(\n|;)+/
+        end
+        @str.split(regex).each do |component|
           component.strip!
           if component =~ /name=(.*)/
             name = $1

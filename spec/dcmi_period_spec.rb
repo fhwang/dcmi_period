@@ -464,4 +464,62 @@ describe 'DCMI::Period' do
       end
     end
   end
+  
+  describe '.parse of a string that incorrectly uses non-newline whitespace to delimit' do
+    before :all do
+      @str = <<-STR
+                 start=2008-12-13T05:01:00Z
+        end=2010-01-31T11:00:00Z          scheme=W3C-DTF       
+      STR
+    end
+    
+    describe 'when parsing according to the standard' do
+      it 'should raise a parse error' do
+        lambda {
+          DCMI::Period.parse @str
+        }.should raise_error(
+          ArgumentError,
+          "end time '2010-01-31T11:00:00Z          scheme=W3C-DTF' could not be parsed"
+        )
+      end
+    end
+    
+    describe 'when parsing with :accept_any_whitespace_to_separate_components' do
+      before :all do
+        @period = DCMI::Period.parse(
+          @str, :accept_any_whitespace_to_separate_components => true
+        )
+      end
+    
+      it 'should not have a name' do
+        @period.name.should be_nil
+      end
+      
+      it 'should have a start' do
+        @period.start.year.should       == 2008
+        @period.start.month.should      == 12
+        @period.start.day.should        == 13
+        @period.start.hour.should       == 5
+        @period.start.min.should        == 1
+        @period.start.sec.should        == 0
+        @period.start.usec.should       == 0
+        @period.start.utc_offset.should == 0
+      end
+      
+      it 'should have an end' do
+        @period.end.year.should       == 2010
+        @period.end.month.should      == 1
+        @period.end.day.should        == 31
+        @period.end.hour.should       == 11
+        @period.end.min.should        == 0
+        @period.end.sec.should        == 0
+        @period.end.usec.should       == 0
+        @period.end.utc_offset.should == 0
+      end
+      
+      it 'should have a scheme' do
+        @period.scheme.should == 'W3C-DTF'
+      end
+    end
+  end
 end
